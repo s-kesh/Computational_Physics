@@ -1,3 +1,9 @@
+! This Program will find root of equation using secant method
+! Langauage : Fortran
+! Author : Keshav Sishodia
+! Rollno : PH18D204
+! You can use and modify this program as much you want.
+
 real function f(x)
         implicit none
         real, intent(in) :: x
@@ -10,7 +16,7 @@ program secant
         real :: x1, x2, tol, dx
         real :: f
 
-        print *, 'This Program will find root of equation using bisection method.'
+        print *, 'This Program will find root of equation using secant method.'
         print *, 'Please enter lower bound, upper bound and tolerence.'
         read (*,*) x1, x2, tol
         print *, "Enter maximum no of iteration you want to try."

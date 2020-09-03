@@ -33,11 +33,9 @@ program newton
         if (f(x) == 0)     then
                 print *, "You got your root", x
         else
-                iter = 0
-                do
+                do iter=0,nmax,1
                         if (iter > nmax)        then
                                 print *, "Iteration has exceded maximum allowed value"
-                                exit
                         endif
                         dfx = df(x)
                         if (abs(dfx) < 1e-12)  then
@@ -52,7 +50,6 @@ program newton
                         else
                                 x = x - dx
                         endif
-                        iter = iter + 1
                 enddo
         endif
 
