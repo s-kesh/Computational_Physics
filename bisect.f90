@@ -1,3 +1,9 @@
+! This Program will find root of equation using bisection method
+! Langauage : Fortran
+! Author : Keshav Sishodia
+! Rollno : PH18D204
+! You can use and modify this program as much you want.
+
 real function f(x)
         implicit none
         real, intent(in) :: x
@@ -16,7 +22,7 @@ end function average
 program bisect
         implicit none
 
-        integer :: inter = 0
+        integer :: inter
         integer :: nmax
         real :: x1, x2, x, tol
         real :: f1, f2, fx
@@ -33,6 +39,7 @@ program bisect
         f1 = f(x1); f2 = f(x2)
 
         if (f1 * f2 < 0)        then
+                inter = 0
                 do
                         if (inter > nmax)       then
                                 print *, "No if iteration has exceded than your defined maximum."

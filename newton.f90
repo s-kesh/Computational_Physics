@@ -1,3 +1,9 @@
+! This Program will find root of equation using newton rapsion method
+! Langauage : Fortran
+! Author : Keshav Sishodia
+! Rollno : PH18D204
+! You can use and modify this program as much you want.
+
 real function f(x)
         implicit none
         real, intent(in) :: x
@@ -40,6 +46,7 @@ program newton
                         endif
                         dx = f(x) / dfx
                         if (abs(dx) < tol)      then
+                                print *, "After iteration", iter
                                 print *, "You got your root", x
                                 exit
                         else
