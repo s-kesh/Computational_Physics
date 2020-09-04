@@ -8,12 +8,14 @@ real function f(x)
         implicit none
         real, intent(in) :: x
         f = exp(-1 * x) + cos(x)
+!        f = 10*x*exp(-1 * x * x) - 1
 end function f
 
 real function df(x)
         implicit none
         real, intent(in) :: x
         df = -1 * exp(-1 * x) - sin(x)
+!        df = 10 * (x * (-2) * x * exp(-1 * x * x) + exp(-1 * x * x))
 end function df
 
 program newton
@@ -34,7 +36,7 @@ program newton
                 print *, "You got your root", x
         else
                 do iter=0,nmax,1
-                        if (iter > nmax)        then
+                        if (iter == nmax)        then
                                 print *, "Iteration has exceded maximum allowed value"
                         endif
                         dfx = df(x)
