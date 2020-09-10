@@ -1,10 +1,10 @@
 ! This program will find roots of particle in a box problem.
 ! Give energy/potential in eV while half width in A⁰
 ! Hint to give a segment :
-!       z should be between nπ/2 → (n - 1)π/2
+!       z should be between nπ/2 → (n + 1)π/2
 !       keep n odd for even state and even for odd state
 !       so, given segment should be calculated using
-!       Energy = V₀ - (z / z₀a)², where z₀ = 0.511974
+!       Energy = (z / z₀a)², where z₀ = 0.511974
 ! Langauage : Fortran
 ! Author : Keshav Sishodia
 ! Rollno : PH18D204
