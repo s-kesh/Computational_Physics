@@ -1,7 +1,7 @@
 ! This program will find roots of particle in a box problem.
-! Give energy/potential in eV while width in A⁰
+! Give energy/potential in eV while half width in A⁰
 ! Hint to give a segment :
-!       z should be between (n-1)π/2 → nπ/2
+!       z should be between nπ/2 → (n - 1)π/2
 !       keep n odd for even state and even for odd state
 !       so, given segment should be calculated using
 !       Energy = V₀ - (z / z₀a)², where z₀ = 0.511974
@@ -24,6 +24,7 @@ end function f
 
 program bisect
         implicit none
+        character(100) :: x0char, x1char, flchar
         integer :: iter, nmax
         real :: x0, x1, x, tol, a, v, zx
         real :: f0, f1, fx
@@ -34,22 +35,36 @@ program bisect
         real :: z0
         z0 = 0.5119740204943241
 
-        ! User Input needed for problem
         print *, "This Program will eigen value for particle in a box"
-        print *, "Please enter half width of well in A⁰"
-        read (*,*) a
-        print *, "Please enter potential of well in eV"
-        read (*,*) v
-        zx = z0 * a * sqrt(v)
 
-        ! Lower and upper bounds.
-        ! Flag is used for even - odd functions.
-        print *, "Please enter lower bound, upper bound (in eV) and tolerence."
-        read (*,*) x0, x1, tol
-        print *, "Enter maximum no of iteration you want to try."
-        read (*,*) nmax
-        print *, "Enter '1' for odd function and '2' for even."
-        read (*,*) flag
+        if (command_argument_count() .ne. 3)  then
+                ! User Input needed for problem
+                print *, "Please enter half width of well in A⁰"
+                read (*,*) a
+                print *, "Please enter potential of well in eV"
+                read (*,*) v
+
+                ! Lower and upper bounds.
+                ! Flag is used for even - odd functions.
+                print *, "Please enter lower bound, upper bound (in eV) and tolerence."
+                read (*,*) x0, x1, tol
+                print *, "Enter maximum no of iteration you want to try."
+                read (*,*) nmax
+                print *, "Enter 'odd no' for odd function and 'even no' for even."
+                read (*,*) flag
+        else
+                a = 10; v = 10
+                tol = 1e-5; nmax = 100000
+                call get_command_argument(1, x0char)
+                call get_command_argument(2, x1char)
+                call get_command_argument(3, flchar)
+                read (x0char,*) x0
+                read (x1char,*) x1
+                read (flchar,*) flag
+        endif
+
+        zx = z0 * a * sqrt(v)
+        flag = mod(flag,2)
 
         ! converted bounds given in energy to dimensionless numbers
         ! with keeping our problem in mind
@@ -82,14 +97,14 @@ program bisect
                                 f0 = fx
                         endif
                 enddo
-        else if (abs(f0) == tol) then
+        else if (abs(f0) == 0) then
                 print *, "Eigen Value of equation is",&
                         v - (x0 / (z0 * a))**2
-        else if (abs(f1) == tol) then
+        else if (abs(f1) == 0) then
                 print *, "Eigen Value of equation is",&
                         v - (x1 / (z0 * a))**2
         else
-                print *, "No bound state in this range.&
+                print *, "No bound state in this range. &
                         Please use different range or use different function (odd/even)."
         endif
 

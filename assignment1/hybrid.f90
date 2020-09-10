@@ -22,13 +22,28 @@ real function f(x, zx, flag)
         endif
 end function f
 
-program bisect
+real function df(x, zx, flag)
+        implicit none
+        real, intent(in) :: x, zx
+        integer, intent(in) :: flag
+        if (flag == 1)  then
+                df = x * (-1) * sin(x) + cos(x)&
+                        + sqrt(zx * zx - x*x) * cos(x)&
+                        - (x / sqrt(zx*zx - x*x)) * sin(x)
+        else
+                df = x * cos(x) + sin(x)&
+                        + sqrt(zx * zx - x*x) * sin(x)&
+                        + (x / sqrt(zx*zx - x*x)) * cos(x)
+        endif
+end function df
+
+program hybrid
         implicit none
         character(100) :: x0char, x1char, flchar
         integer :: iter, nmax
         real :: x0, x1, x, tol, a, v, zx
-        real :: f0, f1, fx
-        real :: f
+        real :: f0, f1, fx, t, ft, dft
+        real :: f, df
         integer :: flag
 
         ! scale of our problem defined as √((2m/hbar²) * (1eV) * (1A⁰)²)
@@ -54,7 +69,7 @@ program bisect
                 read (*,*) flag
         else
                 a = 10; v = 10
-                tol = 1e-5; nmax = 100000
+                tol = 1e-5; nmax = 1000000000
                 call get_command_argument(1, x0char)
                 call get_command_argument(2, x1char)
                 call get_command_argument(3, flchar)
@@ -82,19 +97,29 @@ program bisect
                                         than your defined maximum."
                                 exit
                         endif
-                        x = (x0 + x1) / 2
+                        t = (x0 + x1) / 2
+                        ft = f(t, zx, flag)
+                        dft = df(t, zx, flag)
+                        if (abs(dft) < 1e-14)   then
+                                print *, "Hit local extreama"
+                                exit
+                        endif
+                        x = t - ft / dft
                         fx = f(x, zx, flag)
+                        if (x > x0 .and. x < x1)        then
+                                continue
+                        else
+                                x = t; fx = ft
+                        endif
                         if (abs(fx) <= tol)    then
                                 print *, "After iteration", iter
                                 print *, "Eigen Value of equation is",&
                                         v - (x / (z0 * a))**2
                                 exit
                         else if (f0 * fx < 0)   then
-                                x1 = x
-                                f1 = fx
+                                x1 = x; f1 = fx
                         else
-                                x0 = x
-                                f0 = fx
+                                x0 = x; f0 = fx
                         endif
                 enddo
         else if (abs(f0) == 0) then
@@ -108,4 +133,4 @@ program bisect
                         Please use different range or use different function (odd/even)."
         endif
 
-end program bisect
+end program hybrid
