@@ -94,7 +94,6 @@ program hybrid
         tol = abs(tol)
 
         f0 = f(x0, z, flag); f1 = f(x1, z, flag)
-        print *, f0, f1
 
         if (f0 * f1 < 0)        then
                 do iter=0,nmax,1

@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 v="$2"
 a="$3"
 
@@ -11,11 +11,18 @@ for i in $(seq 0 100); do
 		var = ((($i + 1) * 2 * a(1)) / (0.511974 * $a))^2;\
 		if (var < 0) var = 0 else var = var; var"\
 		| bc -l)
-	if [ $(echo "($x0*100)/1" | bc) -eq 0 ] && [ $(echo "($x1*100)/1" | bc) -eq 0 ]; then
-		exit
-	else
-#		"$1" "$x0" "$x1" "$i"
+
+	x0int=${x0%.*}
+	x1int=${x1%.*}
+	vint=${v%.*}
+
+	if [ $x0int -lt $vint ];	then
+		if [ $x1int -gt $vint ]; then
+			x1=$v
+		fi
 		"$1" "$v" "$a" "$x0" "$x1" "$i"
+	else
+		exit
 	fi
 
 done
