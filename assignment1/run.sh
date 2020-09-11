@@ -12,14 +12,15 @@ for i in $(seq 0 100); do
 		if (var < 0) var = 0 else var = var; var"\
 		| bc -l)
 
-	x0int=${x0%.*}
-	x1int=${x1%.*}
-	vint=${v%.*}
+	x0int=$(echo "$x0/1" | bc)
+	x1int=$(echo "$x1/1" | bc)
+	vint=$(echo "$v/1" | bc)
 
 	if [ $x0int -lt $vint ];	then
 		if [ $x1int -gt $vint ]; then
 			x1=$v
 		fi
+		echo "Eigen Value no $i"
 		"$1" "$v" "$a" "$x0" "$x1" "$i"
 	else
 		exit
