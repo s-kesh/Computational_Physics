@@ -1,27 +1,43 @@
-#!/bin/bash
-v="$2"
-a="$3"
+#!/bin/sh
 
+# Run it like
+# bash runthis <root finding method> <potential in eV> <halfwidth in A⁰>
+
+method="$1" # kept first input as method
+v="$2"	# kept second input as potential
+a="$3"	# kept third input as half width
+
+# For loop to pass segments to our code
 for i in $(seq 0 100); do
+	# first Input, needs to be f(nπ/2). a(1) = π/4
 	x0=$(echo "scale = 3;\
 		var = (($i * 2 * a(1)) / (0.511974 * $a))^2;
 		if (var < 0) var = 0 else var = var; var"\
 		| bc -l)
+	# first Second, needs to be f((n+1)π/2). a(1) = π/4
 	x1=$(echo "scale = 3;\
 		var = ((($i + 1) * 2 * a(1)) / (0.511974 * $a))^2;\
 		if (var < 0) var = 0 else var = var; var"\
 		| bc -l)
 
+	# convverted floating points to int.
+	# needed for following if condition 
+	# as if in SHELL does not support floating points
 	x0int=$(echo "$x0/1" | bc)
 	x1int=$(echo "$x1/1" | bc)
 	vint=$(echo "$v/1" | bc)
 
+	# Stop passing argument if input became large than potential
+	# It is easy to find why (0_0)
 	if [ $x0int -lt $vint ];	then
 		if [ $x1int -gt $vint ]; then
-			x1=$v
+			x1=$v	# If one of the segment exceed from potential.
+				# take potential final boundry
 		fi
 		echo "Eigen Value no $i"
-		"$1" "$v" "$a" "$x0" "$x1" "$i"
+		# Pass all the argument to our code.
+		# See the source code for more information
+		"$method" "$v" "$a" "$x0" "$x1" "$i"
 	else
 		exit
 	fi
