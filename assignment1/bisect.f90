@@ -4,7 +4,7 @@
 !       z should be between nπ/2 → (n + 1)π/2
 !       keep n odd for odd state and even for even state
 !       so, given segment should be calculated using
-!       Energy = (z / z₀a)², where z₀ = 0.511974
+!       Energy = (z / z₀a)², where z₀ = 0.511710
 ! command line uses : <program> <potential> <half_width> <x0> <x1> <flag>
 ! Langauage : Fortran
 ! Author : Keshav Sishodia
@@ -33,7 +33,7 @@ program bisect
 
         ! scale of our problem defined as √((2m/hbar²) * (1eV) * (1A⁰)²)
         real :: z0
-        z0 = 0.5119740204943241
+        z0 = 0.5117102568084231
 
         print *, "This Program will eigen value for particle in a box"
 

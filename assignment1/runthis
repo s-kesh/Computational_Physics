@@ -7,6 +7,7 @@ method="$1" # kept first input as method
 v="$2"	# kept second input as potential
 a="$3"	# kept third input as half width
 
+
 # For loop to pass segments to our code
 for i in $(seq 0 100); do
 	# first Input, needs to be f(nπ/2). a(1) = π/4
@@ -35,9 +36,12 @@ for i in $(seq 0 100); do
 				# take potential final boundry
 		fi
 		echo "Eigen Value no $i"
+		echo "_________________________________________________"
 		# Pass all the argument to our code.
 		# See the source code for more information
 		"$method" "$v" "$a" "$x0" "$x1" "$i"
+		echo "================================================="
+		echo " "
 	else
 		exit
 	fi

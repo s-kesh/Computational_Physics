@@ -1,0 +1,25 @@
+#!/bin/sh
+
+e="$1"
+a=10
+v=10
+z0=5.117102568084231 # / 10⁹
+
+alpha=$(echo "scale = 20; $z0 * sqrt($e) * 10^9" | bc -l)
+beta=$(echo "scale = 20; $z0 * sqrt($v - $e) * 10^9" | bc -l)
+alphaa=$(echo "scale = 20; $alpha * 10^(-10) * $a" | bc -l)
+betaa=$(echo "scale = 20; $beta * 10^(-10) * $a" | bc -l)
+
+B=$(echo "scale = 20; sqrt($beta / (1 + $betaa)) * c($alphaa)\
+	* e($betaa)" | bc -l)
+D=$(echo "scale = 20; sqrt($beta / (1 + $betaa))" | bc -l)
+echo "EVEN x < -10e-10 ? $B * exp($beta * x) :\
+	(x < 10e-10 ? $D * cos($alpha * x) : $B * exp(-$beta * x))"
+
+B=$(echo "scale = 20; -1 * sqrt($beta / (1 + $betaa)) * s($alphaa)\
+	* e($betaa)" | bc -l)
+C=$(echo "scale = 20; sqrt($beta / (1 + $betaa))" | bc -l)
+echo "ODD x < -10e-10 ? $B * exp($beta * x) :\
+	(x < 10e-10 ? $C * sin($alpha * x) : -1 * $B * exp(-$beta * x))"
+echo " "
+
