@@ -1,10 +1,9 @@
 # To Solve ODE
-Just define your f(x,y) (dy/dx = f(x,y) in function.f90
-Edit diff.f90 to call correct method
+Just define your f(x,y) (dy/dx = f(x,y) in diff.f90
 
 ## Compile
 ```
-	gfortran function.f90 ode1d.f90 diff.f90 -o <output>
+	gfortran ode1d.f90 diff.f90 -o <output>
 ```
 
 ## Running
