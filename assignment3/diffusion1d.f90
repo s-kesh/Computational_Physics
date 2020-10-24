@@ -1,8 +1,8 @@
 real function f(x)
         implicit none
         real, intent(in) :: x
-!        f =  4 * x * (1 - x)
-        f = exp(-1 * x * x)
+        f =  4 * x * (1 - x)
+!        f = exp(-1 * x * x)
 end function
 
 program diffusion1d
@@ -21,6 +21,7 @@ program diffusion1d
         print *, "Please enter maximum no of time steps."
         read (*,*) ptime
 
+        pspace = pspace + 1
         allocate(u(ptime, pspace), stat = ustat)
 
         if (ustat .eq. 1)      then
@@ -38,18 +39,17 @@ program diffusion1d
         read (*,*) lf
         D = 1
 
-        do i = 1, pspace
-                u(1, i) = f( li + i * (lf - li) / pspace)
+        u(1, 1) = boundi
+        do i = 2, pspace - 1
+                u(1, i) = f( li + (i - 1) * (lf - li) / (pspace - 1))
         enddo
-        u(:, 1) = boundi
-        u(:, pspace) = boundl
+        u(1, pspace) = boundl
 
         al = alpha(pspace, ptime, li, lf, tfinal, D)
         
-        print *, al
-
 !        call ex(u, pspace, ptime, al)
-        call im(u, pspace, ptime, al)
+!        call im(u, pspace, ptime, al)
+        call cn(u, pspace, ptime, al)
 
         do i = 1, ptime
                 write(*,'(*(g0.7), A)', advance='no') (u(i,j), TAB, j = 1, pspace - 1)

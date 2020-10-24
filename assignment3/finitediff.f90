@@ -7,14 +7,14 @@
 !**********************************
 module finitediff
         implicit none
-        public alpha, ex, im
+        public alpha, ex, im, cn
 
         contains
                 real function alpha(sp, tp, li, lf, tf, D)
                       implicit none
                       integer, intent(in) :: sp, tp
                       real , intent(in) :: li, lf, tf, D
-                      alpha = ( (tf / tp) / ((lf - li) / sp)**2 ) * D
+                      alpha = ( (tf / tp) / ((lf - li) / (sp - 1))**2 ) * D
                 end function
 
                 subroutine ex(u, sp, tp, alp)
@@ -41,37 +41,88 @@ module finitediff
                         real, intent(in) :: alp
                         integer, intent(in) :: sp, tp
                         real, intent(inout) :: u(:,:)
-                        real, allocatable :: AU(:), AD(:), AL(:), uold(:)
+                        ! Define A matrix.
+                        ! AU is upper diagonal
+                        ! AD is diagonal
+                        ! AL is lower Diagonal
+                        ! Eq Ax_new = x_old
+                        real, dimension(sp) :: uold, AD, AD_orig
+                        real, dimension(sp - 1) :: AU, AL, AU_orig, AL_orig
                         real :: ib, lb
-                        integer :: sn, tn, i, stat
+                        integer :: tn, i, stat
 
-
-                        allocate(AU(sp-1))
-                        allocate(AD(sp))
-                        allocate(AL(sp-1))
-                        allocate(uold(sp))
-
-                        do i = 1, sp -1
-                                AU(i) = -1 * alp
-                                AL(i) = AU(i)
+                        do i = 1, sp - 1
+                                AU_orig(i) = -1 * alp
+                                AL_orig(i) = AU_orig(i)
                         end do
                         do i = 1, sp
-                                AD(i) = 1 + 2 * alp
+                                AD_orig(i) = 1 + 2 * alp
+                                uold(i) = u(1, i)
                         enddo
 
-                        uold = u(1, :)
-                        ib = uold(1)
-                        lb = uold(sp)
+                        ib = u(1, 1)
+                        lb = u(1, sp)
+
                         do tn = 2, tp
+                                AL = AL_orig
+                                AD = AD_orig
+                                AU = AU_orig
+
+                                ! Using subroutine from lapack,
+                                ! It will save solution in uold and will modify AL, AD and AU
                                 call SGTSV(sp, 1, AL, AD, AU, uold, sp, stat)
+
                                 uold(1) = ib
                                 uold(sp) = lb
                                 u(tn, :) = uold
                         enddo
-                        deallocate(AU)
-                        deallocate(AD)
-                        deallocate(AL)
-                        deallocate(uold)
-
                 end subroutine im
+
+                subroutine cn(u, sp, tp, alp)
+                        ! Operations are row wise
+                        ! first row is initial value
+                        implicit none
+                        real, intent(in) :: alp
+                        integer, intent(in) :: sp, tp
+                        real, intent(inout) :: u(:,:)
+                        ! Two Matrixes A and B.
+                        ! Eq
+                        ! Ax_new = Bx_old, we need to find x_new
+                        real, dimension(sp) :: AD, AD_orig, Bxold
+                        real, dimension(sp - 1) :: AU, AL, AU_orig, AL_orig
+                        real :: ib, lb
+                        integer :: tn, i, stat
+
+                        do i = 1, sp - 1
+                                AU_orig(i) = -1 * alp
+                                AL_orig(i) = AU_orig(i)
+                        enddo
+                        do i = 1, sp
+                                AD_orig(i) = 2 * (1 + alp)
+                        enddo
+                        ib = u(1, 1)
+                        lb = u(1, sp)
+
+                        print *, alp
+                        do tn = 2, tp
+
+                                Bxold(1) = 2 * (1 - alp) * u(tn - 1, 1) + alp * u(tn - 1, 2)
+                                do i = 2, sp - 1
+                                        Bxold(i) = alp * u(tn - 1, i - 1) + 2 * (1- alp) * u(tn - 1, i) + alp * u(tn - 1, i + 1)
+                                enddo
+                                Bxold(sp) = alp * u(tn - 1, sp - 1) + 2 * (1 - alp) * u(tn - 1, sp)
+
+                                AL = AL_orig
+                                AD = AD_orig
+                                AU = AU_orig
+
+                                ! Using subroutine from lapack,
+                                ! It will save solution in Bxold and will modify AL, AD and AU
+                                call SGTSV(sp , 1, AL, AD, AU, Bxold, sp, stat)
+
+                                Bxold(1) = ib
+                                Bxold(sp) = lb
+                                u(tn, :) = Bxold
+                        enddo
+                end subroutine cn
 end module finitediff
