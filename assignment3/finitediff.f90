@@ -25,12 +25,17 @@ module finitediff
                         integer, intent(in) :: sp, tp
                         real, intent(inout) :: u(:,:)
                         integer :: sn, tn
+                        real :: ib, lb
+                        ib = u(1,1)
+                        lb = u(1,sp)
 
                         do tn = 1, tp - 1
                                 do sn = 2, sp - 1
                                         u(tn + 1 , sn) = (1 - 2 * alp) * u(tn, sn) &
                                                 + alp * (u(tn, sn+1) + u(tn, sn -1))
                                 enddo
+                                u(tn, 1) = ib
+                                u(tn, sp) = lb
                         enddo
                 end subroutine ex
 
@@ -53,7 +58,7 @@ module finitediff
 
                         do i = 1, sp - 1
                                 AU_orig(i) = -1 * alp
-                                AL_orig(i) = AU_orig(i)
+                                AL_orig(i) = -1 * alp
                         end do
                         do i = 1, sp
                                 AD_orig(i) = 1 + 2 * alp
@@ -90,27 +95,31 @@ module finitediff
                         ! Ax_new = Bx_old, we need to find x_new
                         real, dimension(sp) :: AD, AD_orig, Bxold
                         real, dimension(sp - 1) :: AU, AL, AU_orig, AL_orig
-                        real :: ib, lb
+                        real :: ib, lb, alpha
                         integer :: tn, i, stat
+
+                        alpha = alp / 2
 
                         do i = 1, sp - 1
                                 AU_orig(i) = -1 * alp
                                 AL_orig(i) = AU_orig(i)
                         enddo
                         do i = 1, sp
-                                AD_orig(i) = 2 * (1 + alp)
+                                AD_orig(i) = 1 + 2 * alp
                         enddo
                         ib = u(1, 1)
                         lb = u(1, sp)
 
-                        print *, alp
                         do tn = 2, tp
 
-                                Bxold(1) = 2 * (1 - alp) * u(tn - 1, 1) + alp * u(tn - 1, 2)
+                                Bxold(1) = 2 * (1 - alpha) * u(tn - 1, 1) + alpha * u(tn - 1, 2)
                                 do i = 2, sp - 1
-                                        Bxold(i) = alp * u(tn - 1, i - 1) + 2 * (1- alp) * u(tn - 1, i) + alp * u(tn - 1, i + 1)
+                                        Bxold(i) = alpha * u(tn - 1, i - 1) &
+                                                + (1 - 2 * alpha) * u(tn - 1, i) &
+                                                + alpha * u(tn - 1, i + 1)
                                 enddo
-                                Bxold(sp) = alp * u(tn - 1, sp - 1) + 2 * (1 - alp) * u(tn - 1, sp)
+                                Bxold(sp) = alpha * u(tn - 1, sp - 1 )&
+                                       + 2 * (1 - alpha) * u(tn - 1, sp)
 
                                 AL = AL_orig
                                 AD = AD_orig
