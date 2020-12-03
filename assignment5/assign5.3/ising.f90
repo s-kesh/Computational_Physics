@@ -1,20 +1,35 @@
 module ising
         implicit none
         public
-
-        ! Basically smpin Array of up and down spins
-        type :: smatrix
-                integer :: siz
-                integer, allocatable, dimension(:, :) :: val
-        end type
+                integer :: N
+                real, dimension(10) :: list
+                integer, allocatable, dimension(:) :: spins
 
         contains
 
+                ! created list for calculating rejection
+                subroutine rlist(j, b, t)
+                        implicit none
+                        real, intent(in) :: j, b, t
+                        integer :: p, q
+                        integer, dimension(5) :: f
+                        integer, dimension(2) :: alpha
+                        f = [-4, -2, 0, 2, 4]
+                        alpha = [-1, 1]
+
+                        do p = 1, 2
+                                do q = 1, 5
+                                        list((p -1) * 5 + q) &
+                                                = exp((2 * alpha(p) &
+                                                * (j * f(q) + b)) / t)
+                                enddo
+                        enddo
+                end subroutine
+
                 ! for calculation of metropils probability
-                real function listmap(a, f, list)
+                real function listmap(a, f)
                         implicit none
                         integer , intent(in) :: a, f
-                        real, dimension(:), intent(in) :: list
                         if ((a .eq. -1) .and. (f .eq. -4)) then
                                 listmap = list(1)
                         else if ((a .eq. -1) .and. (f .eq. -2)) then
@@ -39,150 +54,118 @@ module ising
                 end function
 
                 ! Calculating f
-                integer function fcal(sm, x, y)
+                integer function fcal(x)
                         implicit none
-                        type(smatrix), intent(in) :: sm
-                        integer, intent(in) :: x, y
-                        integer, dimension(8) :: n
-!                        x1, y1, x2, y2, x3, y3, x4, y4
-                        integer :: i
+                        integer, intent(in) :: x
+                        integer, dimension(4) :: y
 
-                        n(1) = modulo(x + 1, sm%siz)
-                        n(2) = modulo(y, sm%siz)
-                        n(3) = modulo(x, sm%siz)
-                        n(4) = modulo(y + 1, sm%siz)
-                        n(5) = modulo(x - 1, sm%siz)
-                        n(6) = modulo(y, sm%siz)
-                        n(7) = modulo(x, sm%siz)
-                        n(8) = modulo(y - 1, sm%siz)
+                        y(1) = ((x - 1) / N) * N + modu(x - 1, N)
+                        y(2) = ((x - 1) / N) * N + modu(x + 1, N)
+                        y(3) = modu(x - N, N * N)
+                        y(4) = modu(x + N, N * N)
 
-                        do i = 1, 8
-                                if (n(i) .eq. 0)        then
-                                        n(i) = sm%siz
-                                endif
-                        enddo
-!                                print *, n
-
-                        fcal = sm%val(n(1), n(2)) + sm%val(n(3), n(4)) &
-                                + sm%val(n(5), n(6)) + sm%val(n(7), n(8))
+                        fcal = spins(y(1)) + spins(y(2)) &
+                                + spins(y(3)) + spins(y(4))
                 end function
 
-                ! magnetization per spin
-                real function magnetization(sm)
+                ! Custom made modulus function for calculating
+                ! neighbours
+                integer function modu(x, y)
                         implicit none
-                        type(smatrix), intent(in) :: sm
-                        integer :: i, j
-                        real :: zodh
-                        zodh = 0
-                        do i = 1, sm%siz
-                                do j = 1, sm%siz
-                                        zodh = zodh + sm%val(i, j)
-                                enddo
-                        enddo
-                        magnetization = (1.0 / (sm%siz * sm%siz)) * zodh
+                        integer, intent(in) :: x, y
+                        integer :: t1, t2
+                        t1 = x / y
+                        t2 = x - t1 * y
+                        if (t2 .eq. 0 .or. t2 .lt. 0) then
+                                modu = y + t2
+                        else
+                                modu = t2
+                        endif
                 end function
 
                 ! intialize random spin system
-                subroutine intialize_random(sm, sizs)
+                subroutine intialize_random()
                         implicit none
-                        type(smatrix), intent(out) :: sm
-                        integer , intent(in) :: sizs
-                        integer :: i, j
+                        integer :: i
                         real :: eta
 
-                        allocate(sm%val(sizs, sizs))
-                        sm%siz = sizs
-                        call random_number(eta)
-                        do i = 1, sm%siz
-                                do j = 1, sm%siz
-                                        if (eta .lt. 0.5) then
-                                                sm%val(i, j) = 1
-                                        else
-                                                sm%val(i, j) = -1
-                                        endif
-                                enddo
+                        allocate(spins(N * N))
+                        do i = 1, N * N
+                                call random_number(eta)
+                                if (eta .lt. 0.5) then
+                                        spins(i) = 1
+                                else
+                                        spins(i) = -1
+                                endif
                         enddo
                 end subroutine intialize_random
 
                 ! cleaning up spins
-                subroutine cleanup(sm)
+                subroutine cleanup()
                         implicit none
-                        type(smatrix), intent(inout) :: sm
-                        deallocate(sm%val)
-                        sm%siz  = 0
+                        deallocate(spins)
                 end subroutine cleanup
 
-                ! fliping a single spin state at xi, yi position from spin matrix
-                subroutine ran_flip(sm, smt, xi, yi)
-                        implicit none
-                        integer, intent(out) :: xi, yi
-                        type(smatrix), intent(in):: sm
-                        type(smatrix), intent(inout):: smt
-                        real :: x, y
-
-                        smt%val = sm%val
-
-                        call random_number(x)
-                        call random_number(y)
-                        xi = 1  +  floor(20 * x)
-                        yi = 1  +  floor(20 * y)
-
-                        smt%val(xi, yi) = -1 * sm%val(xi, yi)
-                end subroutine ran_flip
-
-                ! created list for calculating rejection
-                subroutine rlist(r, j, b, t)
-                        implicit none
-                        real, intent(in) :: j, b, t
-                        real, intent(out) :: r(:)
-                        integer :: p, q
-                        integer, dimension(5) :: f
-                        integer, dimension(2) :: alpha
-                        f = [-4, -2, 0, 2, 4]
-                        alpha = [-1, 1]
-
-                        do p = 1, 2
-                                do q = 1, 5
-                                        r((p -1) * 5 + q) = exp((-2 * alpha(p) * (j * f(q) + b)) / t)
-                                enddo
-                        enddo
-                end subroutine
-
                 ! Metropils Algorithim
-                subroutine mertopolis(sm, list)
+                subroutine mertopolis() !j, b, delE)
                         implicit none
-                        type(smatrix), intent(inout) :: sm
-                        real, dimension(:), intent(in) :: list
-                        type(smatrix) :: smt
-                        integer :: salpha, f
-                        integer :: x, y
+!                        real, intent(in) :: j, b
+!                        real, intent(out) :: delE
+                        integer :: salpha
+                        integer :: x, f
                         real :: neta
 
-                        call intialize_random(smt, sm%siz)
-                        call ran_flip(sm, smt, x, y)
-
-                        salpha = smt%val(x, y)
-                        f = fcal(smt, x, y)
                         call random_number(neta)
-                        if ( neta .lt. listmap(salpha, f, list)) then
-                                sm = smt
+                        x = 1 + floor(N * N * neta)
+                        salpha = -1 * spins(x)
+                        f = fcal(x)
+
+                        call random_number(neta)
+                        if ( neta .lt. listmap(salpha, f)) then
+                                spins(x) = salpha
+!                                delE = salpha * (j * f + b)
                         endif
-
-                        call cleanup(smt)
-
                 end subroutine mertopolis
 
                 ! A sweep. Runs Metropolis Algorithim N times
-                subroutine sweep(sm, list)
+                subroutine sweep() !j, b, Energy)
                         implicit none
-                        type(smatrix), intent(inout) :: sm
-                        real, dimension(:), intent(in) :: list
+!                        real, intent(in) :: j, b
+!                        real, intent(inout) :: Energy
                         integer :: i
+                        real :: deltaE
 
-                        do i = 1, sm%siz * sm%siz
-                                call mertopolis(sm, list)
+                        deltaE = 0
+                        do i = 1, N * N
+                                call mertopolis() !j, b, deltaE)
+!                                Energy = Energy + deltaE
                         enddo
                 end subroutine sweep
 
-end module ising
 
+                !! Thermal Observations
+
+                real function Mag()
+                        implicit none
+                        Mag = abs(sum(spins))
+                end function
+
+                real function Ener(j, b)
+                        implicit none
+                        real, intent(in) :: j, b
+                        integer :: i
+                        Ener = 0
+                        do i = 1, N * N
+                                Ener = Ener + spins(i) * (j * fcal(i) + b)
+                        enddo
+                end function
+
+                real function chi(t)
+                        implicit none
+                        real, intent(in) :: t
+                        real :: msq
+
+                        msq = sum(spins**2)
+                        chi = (1 / t) * ( msq - Mag())
+                end function
+end module ising
