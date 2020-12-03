@@ -4,18 +4,11 @@ module ising
 
         ! Basically smpin Array of up and down spins
         type :: smatrix
-                integer :: row, col
+                integer :: siz
                 integer, allocatable, dimension(:, :) :: val
         end type
 
         contains
-
-                ! invert a single spin
-                integer function invertl(x)
-                        implicit none
-                        integer, intent(in) :: x
-                        invertl = -1 * x
-                end function
 
                 ! for calculation of metropils probability
                 real function listmap(a, f, list)
@@ -54,20 +47,21 @@ module ising
 !                        x1, y1, x2, y2, x3, y3, x4, y4
                         integer :: i
 
-                        n(1) = modulo(x + 1, sm%row)
-                        n(2) = modulo(y, sm%row)
-                        n(3) = modulo(x, sm%row)
-                        n(4) = modulo(y + 1, sm%row)
-                        n(5) = modulo(x - 1, sm%row)
-                        n(6) = modulo(y, sm%row)
-                        n(7) = modulo(x, sm%row)
-                        n(8) = modulo(y - 1, sm%row)
+                        n(1) = modulo(x + 1, sm%siz)
+                        n(2) = modulo(y, sm%siz)
+                        n(3) = modulo(x, sm%siz)
+                        n(4) = modulo(y + 1, sm%siz)
+                        n(5) = modulo(x - 1, sm%siz)
+                        n(6) = modulo(y, sm%siz)
+                        n(7) = modulo(x, sm%siz)
+                        n(8) = modulo(y - 1, sm%siz)
 
                         do i = 1, 8
                                 if (n(i) .eq. 0)        then
-                                        n(i) = sm%row
+                                        n(i) = sm%siz
                                 endif
                         enddo
+!                                print *, n
 
                         fcal = sm%val(n(1), n(2)) + sm%val(n(3), n(4)) &
                                 + sm%val(n(5), n(6)) + sm%val(n(7), n(8))
@@ -80,28 +74,27 @@ module ising
                         integer :: i, j
                         real :: zodh
                         zodh = 0
-                        do i = 1, sm%row
-                                do j = 1, sm%col
+                        do i = 1, sm%siz
+                                do j = 1, sm%siz
                                         zodh = zodh + sm%val(i, j)
                                 enddo
                         enddo
-                        magnetization = (1.0 / (sm%col * sm%row)) * zodh
+                        magnetization = (1.0 / (sm%siz * sm%siz)) * zodh
                 end function
 
                 ! intialize random spin system
-                subroutine intialize_random(sm, rows, cols)
+                subroutine intialize_random(sm, sizs)
                         implicit none
                         type(smatrix), intent(out) :: sm
-                        integer , intent(in) :: rows, cols
+                        integer , intent(in) :: sizs
                         integer :: i, j
                         real :: eta
 
-                        allocate(sm%val(rows, cols))
-                        sm%row = rows
-                        sm%col = cols
+                        allocate(sm%val(sizs, sizs))
+                        sm%siz = sizs
                         call random_number(eta)
-                        do i = 1, sm%row
-                                do j = 1, sm%col
+                        do i = 1, sm%siz
+                                do j = 1, sm%siz
                                         if (eta .lt. 0.5) then
                                                 sm%val(i, j) = 1
                                         else
@@ -116,8 +109,7 @@ module ising
                         implicit none
                         type(smatrix), intent(inout) :: sm
                         deallocate(sm%val)
-                        sm%row  = 0
-                        sm%col  = 0
+                        sm%siz  = 0
                 end subroutine cleanup
 
                 ! fliping a single spin state at xi, yi position from spin matrix
@@ -135,13 +127,13 @@ module ising
                         xi = 1  +  floor(20 * x)
                         yi = 1  +  floor(20 * y)
 
-                        smt%val(xi, yi) = invertl(sm%val(xi, yi))
+                        smt%val(xi, yi) = -1 * sm%val(xi, yi)
                 end subroutine ran_flip
 
                 ! created list for calculating rejection
-                subroutine rlist(r, j, b)
+                subroutine rlist(r, j, b, t)
                         implicit none
-                        real, intent(in) :: j, b
+                        real, intent(in) :: j, b, t
                         real, intent(out) :: r(:)
                         integer :: p, q
                         integer, dimension(5) :: f
@@ -151,7 +143,7 @@ module ising
 
                         do p = 1, 2
                                 do q = 1, 5
-                                        r((p -1) * 5 + q) = exp(-2 * alpha(p) * (j * f(q) + b))
+                                        r((p -1) * 5 + q) = exp((-2 * alpha(p) * (j * f(q) + b)) / t)
                                 enddo
                         enddo
                 end subroutine
@@ -166,13 +158,13 @@ module ising
                         integer :: x, y
                         real :: neta
 
-                        call intialize_random(smt, sm%row, sm%col)
+                        call intialize_random(smt, sm%siz)
                         call ran_flip(sm, smt, x, y)
 
                         salpha = smt%val(x, y)
                         f = fcal(smt, x, y)
                         call random_number(neta)
-                        if ( listmap(salpha, f, list) > neta) then
+                        if ( neta .lt. listmap(salpha, f, list)) then
                                 sm = smt
                         endif
 
@@ -187,7 +179,7 @@ module ising
                         real, dimension(:), intent(in) :: list
                         integer :: i
 
-                        do i = 1, sm%row * sm%col
+                        do i = 1, sm%siz * sm%siz
                                 call mertopolis(sm, list)
                         enddo
                 end subroutine sweep
