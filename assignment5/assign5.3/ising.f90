@@ -86,18 +86,11 @@ module ising
                 ! intialize random spin system
                 subroutine intialize_random()
                         implicit none
-                        integer :: i
-                        real :: eta
+                        real, dimension(N * N) :: eta
 
                         allocate(spins(N * N))
-                        do i = 1, N * N
-                                call random_number(eta)
-                                if (eta .lt. 0.5) then
-                                        spins(i) = 1
-                                else
-                                        spins(i) = -1
-                                endif
-                        enddo
+                        call random_number(eta)
+                        spins = floor(eta * 2) * 2  - 1
                 end subroutine intialize_random
 
                 ! cleaning up spins
@@ -107,10 +100,8 @@ module ising
                 end subroutine cleanup
 
                 ! Metropils Algorithim
-                subroutine mertopolis() !j, b, delE)
+                subroutine mertopolis()
                         implicit none
-!                        real, intent(in) :: j, b
-!                        real, intent(out) :: delE
                         integer :: salpha
                         integer :: x, f
                         real :: neta
@@ -123,22 +114,16 @@ module ising
                         call random_number(neta)
                         if ( neta .lt. listmap(salpha, f)) then
                                 spins(x) = salpha
-!                                delE = salpha * (j * f + b)
                         endif
                 end subroutine mertopolis
 
                 ! A sweep. Runs Metropolis Algorithim N times
-                subroutine sweep() !j, b, Energy)
+                subroutine sweep()
                         implicit none
-!                        real, intent(in) :: j, b
-!                        real, intent(inout) :: Energy
                         integer :: i
-                        real :: deltaE
 
-                        deltaE = 0
                         do i = 1, N * N
-                                call mertopolis() !j, b, deltaE)
-!                                Energy = Energy + deltaE
+                                call mertopolis()
                         enddo
                 end subroutine sweep
 
@@ -147,25 +132,41 @@ module ising
 
                 real function Mag()
                         implicit none
-                        Mag = abs(sum(spins))
+                        Mag = abs(sum(spins)) / (N * N * 1.0)
                 end function
 
                 real function Ener(j, b)
                         implicit none
                         real, intent(in) :: j, b
-                        integer :: i
-                        Ener = 0
-                        do i = 1, N * N
-                                Ener = Ener + spins(i) * (j * fcal(i) + b)
+                        integer :: p
+
+                        Ener = 0.0
+                        do p = 1, N*N
+                                Ener = Ener + (-0.5 * j * spins(p) * fcal(p) - b * spins(p))
                         enddo
+                        Ener =  Ener / (N * N * 1.0)
                 end function
 
-                real function chi(t)
+                real function Chi(T)
                         implicit none
-                        real, intent(in) :: t
+                        real, intent(in) :: T
                         real :: msq
 
-                        msq = sum(spins**2)
-                        chi = (1 / t) * ( msq - Mag())
+                        msq = (sum(spins**2)) / (N * N * 1.0)
+                        chi = (1 / T) * ( msq - (Mag())**2)
+                end function
+
+                real function Cv(j , b, T)
+                        implicit none
+                        real, intent(in) :: j, b, T
+                        real :: esqr
+                        integer :: p
+
+                        esqr = 0
+                        do p = 1, N*N
+                                esqr = esqr + (-0.5 * j * spins(p) * fcal(p) - b * spins(p))**2
+                        enddo
+                        esqr = esqr / (N * N * 1.0)
+                        Cv = (1 / T**2) * (esqr - Ener(j, b)**2)
                 end function
 end module ising
