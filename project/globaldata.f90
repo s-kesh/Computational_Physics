@@ -1,4 +1,4 @@
-module global
+module globaldata
         implicit none
         character, parameter :: TAB = achar(9)
         character, parameter :: N_LINE = achar(10)
@@ -12,4 +12,5 @@ module global
         integer, parameter :: Ntotal = 100000
         integer, parameter :: Nthermal = 10000
         integer, parameter :: minimize_steps = 20
+        integer, parameter :: Nos = 100
 end module

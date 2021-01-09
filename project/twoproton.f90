@@ -1,5 +1,5 @@
 module twoproton
-        use global
+        use globaldata
         implicit none
 
         contains
@@ -15,12 +15,12 @@ module twoproton
                         var = sum(x * x) / size(x) - avg(x)**2
                 end function
 
-                ! Calculate variation a
                 subroutine cala(S, a)
                         implicit none
                         real, intent(in) :: S
                         real, intent(out) :: a
                         real :: aold
+                        a = 0.5 ! Intial Guess
                         aold = 0
                         do
                                 if (abs(a - aold) .lt. 1.0E-6)  then
@@ -194,4 +194,28 @@ module twoproton
                                 end if
                         end do
                 end subroutine metropolis
+
+                subroutine finish_and_print(S, betaarray, earray, evararray)
+                        implicit none
+                        real, dimension(:), intent(in) :: S
+                        real, dimension(:, :), intent(in) :: betaarray, earray, evararray
+                        integer :: i
+                        integer, dimension(Nos) :: loc
+                        real, dimension(Nos) ::  beta, Energy, EnergyVar
+!                        character(30) :: fmtstring
+
+                        do i = 1, Nos
+                                loc(i) = minloc(earray(i, :), dim=1)
+                                beta(i) = betaarray(i, loc(i))
+                                Energy(i) = earray(i, loc(i))
+                                EnergyVar(i) = evararray(i, loc(i))
+                                write(*, '(*(g0.7), A, *(g0.7), A, *(g0.7), A, *(g0.7), A)', advance='no') &
+                                        S(i), TAB, beta(i), TAB, Energy(i), TAB, EnergyVar(i), N_LINE
+                        end do
+
+!                        open(11, file='FinalData')
+
+!                        deallocate(Elocal, delphibeta, Edelphibeta &
+!                                , betaarray, earray, evararray, S)
+                end subroutine
 end module
