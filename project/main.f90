@@ -1,54 +1,71 @@
 program main
+        use global
         use twoproton
         implicit none
 
-        ! variational parameters
-        ! Two are fixed beforehand
-        ! Reducing no of variational parameters to be 2
-        real, parameter :: alpha = 2., S = 1.411
-        real :: a, beta
-
-        integer, parameter :: N = 1000000
-        integer, parameter :: Nth = 10000
-        integer, parameter :: minimize_steps = 40
-        real, dimension(ncoord) :: r1, r2
+        real :: S, a
+        real, dimension(ncoord * 2, TotalWalkers) :: configuration
         real, dimension(:), allocatable :: Elocal, delphibeta, Edelphibeta
-        real :: Energy, Energysd
-        integer :: accept
-        real :: step
+!        real, dimension(:), allocatable :: earray, evararray
+        real, dimension(minimize_steps) :: betaarray, earray, evararray
+        real :: beta, Energy, EnergyVar
+        integer :: i, j, loc, Nos
 
-        integer :: i
+        Nos = 5
 
+        do i = 1, Nos + 1
+                S = 1.3 + (i - 1) * 0.05
+                a = 0.5
+                betaarray(1) = 0.4
+                call cala(S, a)
 
-        ! Calculate variational parameter a using coulumbs cups condition
-        call cala(S, a)
+                write (*, '(A, A, A, A, A, A, A, A, A, A)'    &
+                        , advance='no')  "Inter-Nuclear Seperation", TAB, "Variation Parameter β"       &
+                        , TAB, "Mean Energy", TAB, "Variation", N_LINE
 
-!        write (*, '(A, A, A, A)', advance='no') "stepsize", TAB, "Accept", N_LINE
-        step = 1.55
-        beta = 0.4
-        do i = 1, minimize_steps
-                ! Generate position of electrons randomly
-                ! And calculating probabiliy and local energy of that configuration
-                call random_seed()
-                call genconfig(r1, r2)
-                allocate(Elocal(N))
-                allocate(delphibeta(N))
-                allocate(Edelphibeta(N))
-                call metropolis(r1, r2, S, a, beta, alpha, accept, step, Nth, N, Elocal, delphibeta, Edelphibeta)
-                beta = min_beta(beta, Elocal, delphibeta, Edelphibeta)
-                Energy = avg(Elocal)
-                Energysd = sd(Elocal)
-                write (*, '(*(g0.7), A, *(g0.7), A, *(g0.7), A)', advance='no')  &
-                        beta, TAB, Energy, TAB, Energysd, N_LINE
-                deallocate(Elocal)
-                deallocate(delphibeta)
-                deallocate(Edelphibeta)
-        enddo
+!                allocate(earray(minimize_steps))
+!                allocate(evararray(minimize_steps))
 
-!        write (*, '(*(g0.7), A, *(g0.7), A)', advance='no') step, TAB, accept / (1. * N), N_LINE
+                do j = 1, minimize_steps
+                        allocate(Elocal(NTotal))
+                        allocate(delphibeta(NTotal))
+                        allocate(Edelphibeta(NTotal))
 
+                        ! Generate position of electrons randomly
+                        ! And calculating probabiliy and local energy of that configuration
+                        call random_seed()
+                        call genconfig(configuration)
+                        call metropolis(configuration, S, a, betaarray(j), Elocal, delphibeta, Edelphibeta)
 
-!        write (*, '(*(g0.7), A, *(g0.7), A, *(g0.7), A)', advance='no') &
-!                beta, TAB, Energy, TAB, accept / (1. * N), N_LINE
+                        earray(j) = avg(Elocal(Nthermal: NTotal))
+                        evararray(j) = var(Elocal(Nthermal: NTotal))
+                        write (*        &
+                                , '(*(g0.7), A, *(g0.7), A, *(g0.7), A, *(g0.7), A, *(g0.7), A)'    &
+                                , advance='no')  S, TAB, betaarray(j), TAB, earray(j), TAB, evararray(j), N_LINE
+
+                        if (j .ne. minimize_steps) betaarray(j + 1) = min_beta(betaarray(j), earray(j), delphibeta, Edelphibeta)
+
+                        deallocate(Elocal)
+                        deallocate(delphibeta)
+                        deallocate(Edelphibeta)
+                end do
+
+                print *, "============================================================================================"
+
+                loc = minloc(earray, dim=1)
+                beta = betaarray(loc)
+                Energy = earray(loc)
+                EnergyVar = evararray(loc)
+
+                write (*        &
+                        , '(A, A, *(g0.7), A, *(g0.7), A, *(g0.7), A, *(g0.7), A, *(g0.7), A)', advance='no') &
+                        "minimum", TAB, S, TAB, beta, TAB, Energy, TAB, EnergyVar, N_LINE
+
+                print *, "============================================================================================"
+
+!                deallocate(earray)
+!                deallocate(evararray)
+
+        end do
 
 end program main

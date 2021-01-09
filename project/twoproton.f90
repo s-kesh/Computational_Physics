@@ -1,26 +1,26 @@
-! All lengths are in Angstrom and energies in eV
 module twoproton
+        use global
         implicit none
 
-        character, parameter :: TAB = achar(9)
-        character, parameter :: N_LINE = achar(10)
-
-        ! physical constanst
-        real, parameter :: a0 = 0.529           ! unit A⁰
-        real, parameter :: e = 27.2             ! unit eV hatree energy
-
-        ! Inputs
-        integer, parameter :: ncoord = 3
-
-
         contains
+                real function avg(x)
+                        implicit none
+                        real, dimension(:), intent(in) :: x
+                        avg = sum(x) / size(x)
+                end function
+
+                real function var(x)
+                        implicit none
+                        real, dimension(:), intent(in) :: x
+                        var = sum(x * x) / size(x) - avg(x)**2
+                end function
+
                 ! Calculate variation a
                 subroutine cala(S, a)
                         implicit none
                         real, intent(in) :: S
                         real, intent(out) :: a
                         real :: aold
-                        a = 0.5
                         aold = 0
                         do
                                 if (abs(a - aold) .lt. 1.0E-6)  then
@@ -32,227 +32,166 @@ module twoproton
                 end subroutine cala
 
                 ! Generate random coordinates of system
-                subroutine genconfig(r1, r2)
+                subroutine genconfig(config)
                         implicit none
-                        real, dimension(:), intent(out) :: r1, r2
-                        call random_number(r1)
-                        call random_number(r2)
-                        r1 = r1 - 0.5
-                        r2 = r2 - 0.5
-!                        print *, "r1", r1
-!                        print *, "r2", r2
+                        real, dimension(:, :), intent(out) :: config
+                        call random_number(config)
+                        config = config - 0.5
                 end subroutine genconfig
-
-                subroutine cal_para(r1, r2, S, a, beta, alpha  &
-                                , r1l, r1r, r2l, r2r, r12 &
-                                , r1l_norm, r1r_norm, r2l_norm, r2r_norm, r12_norm &
-                                , phi1L, phi1R, phi1, phi2L, phi2R, phi2, phi12)
-                        implicit none
-                        real, dimension(:), intent(in) :: r1, r2
-                        real, intent(in) :: S, a, beta, alpha
-                        real, dimension(:), intent(out) :: r1l, r1r, r2l, r2r, r12
-                        real, intent(out) :: r1l_norm, r1r_norm, r2l_norm, r2r_norm, r12_norm
-                        real, intent(out) :: phi1L, phi1R, phi2L, phi2R
-                        real, intent(out) :: phi1, phi2, phi12
-
-                        real, dimension(size(r1)) :: L, R
-
-                        L = [-S / 2., 0., 0.]
-                        R = [S / 2., 0., 0.]
-
-                        r1l = r1 - L
-                        r1r = r1 - R
-                        r2l = r2 - L
-                        r2r = r2 - R
-                        r12 = r1 - r2
-
-
-                        r1l_norm = norm2(r1l)
-                        r1r_norm = norm2(r1r)
-                        r2l_norm = norm2(r2l)
-                        r2r_norm = norm2(r2r)
-                        r12_norm = norm2(r12)
-
-                        phi1L = exp(-r1l_norm / a)
-                        phi1R = exp(-r1r_norm / a)
-                        phi2L = exp(-r2l_norm / a)
-                        phi2R = exp(-r2r_norm / a)
-
-                        phi1 = phi1L + phi1R
-                        phi2 = phi2L + phi2R
-                        phi12 = exp( r12_norm / (alpha * (1. + beta * r12_norm)))
-
-                end subroutine
-
-                subroutine energyloc(r1, r2, S, a, beta, alpha, E_local, delbeta, delE)
-                        implicit none
-                        real, dimension(:), intent(in) :: r1, r2
-                        real, intent(in) :: S, a, beta, alpha
-                        real, intent(out) :: E_local, delbeta, delE
-
-                        real, dimension(size(r1)) :: r1l, r1r, r2l, r2r, r12
-                        real :: r1l_norm, r1r_norm, r2l_norm, r2r_norm, r12_norm
-                        real :: phi1L, phi1R, phi2L, phi2R
-                        real :: phi1, phi2, phi12
-
-
-                        real, dimension(size(r1)) :: r1l_unit, r1r_unit, r2l_unit, r2r_unit, r12_unit
-                        real :: kinetic , potential
-                        real :: e1, e2, cor, cross
-                        real :: cross1, cross2
-
-                        call cal_para(r1, r2, S, a, beta, alpha  &
-                                , r1l, r1r, r2l, r2r, r12 &
-                                , r1l_norm, r1r_norm, r2l_norm, r2r_norm, r12_norm &
-                                , phi1L, phi1R, phi1, phi2L, phi2R, phi2, phi12)
-
-                        r1l_unit = r1l / r1l_norm
-                        r1r_unit = r1r / r1r_norm
-                        r2l_unit = r2l / r2l_norm
-                        r2r_unit = r2r / r2r_norm
-                        r12_unit = r12 / r12_norm
-
-                        potential = -(1. / r1l_norm + 1. / r1r_norm &
-                                + 1. / r2l_norm + 1. / r2r_norm) &
-                                + 1. / r12_norm
-
-                        e1 = (phi1L / r1l_norm + phi1R / r1r_norm) &
-                                / (a * phi1)
-                        e2 = (phi12 / r2l_norm + phi2R / r2r_norm) &
-                                / (a * phi2)
-
-                        cross1 = (phi1L * sum(r1l_unit * r12_unit) &
-                                + phi1R * sum(r1r_unit * r12_unit)) &
-                                / (phi1 * 2. * a * (1 + beta * r12_norm)**2)
-                        cross2 = (phi2L * sum(r2l_unit * r12_unit) &
-                                + phi2R * sum(r2r_unit * r12_unit)) &
-                                / (phi2 * 2. * a * (1 + beta * r12_norm)**2)
-                        cross = cross1 - cross2
-
-                        cor = (-1. / a**2) &
-                                - ((1. + 4. * beta) * r12_norm + 4.) &
-                                / (4. * r12_norm * (beta * r12_norm + 1.)**4)
-
-                        kinetic = e1 + e2 + cross + cor
-
-                        E_local = kinetic + potential
-
-                        delbeta = -r12_norm**2 / (alpha * (1. + beta * r12_norm)**2)
-                        delE = E_local * delbeta
-
-!                        print *, "kinetic", kinetic
-!                        print *, "potential", potential
-!                        print *, "Eloal", E_local
-                end subroutine
-
-                real function prob(r1, r2, S, a, beta, alpha)
-                        implicit none
-                        real, dimension(:), intent(in) :: r1, r2
-                        real, intent(in) :: S, a, beta, alpha
-
-                        real, dimension(size(r1)) :: r1l, r1r, r2l, r2r, r12
-                        real :: r1l_norm, r1r_norm, r2l_norm, r2r_norm, r12_norm
-                        real :: phi1L, phi1R, phi2L, phi2R
-                        real :: phi1, phi2, phi12
-
-                        call cal_para(r1, r2, S, a, beta, alpha  &
-                                , r1l, r1r, r2l, r2r, r12 &
-                                , r1l_norm, r1r_norm, r2l_norm, r2r_norm, r12_norm &
-                                , phi1L, phi1R, phi1, phi2L, phi2R, phi2, phi12)
-
-!                        print *, "r1l", r1l
-!                        print *, "r1r", r1r
-!                        print *, "r2l", r2l
-!                        print *, "r2r", r2r
-!                        print *, "r12", r12
-
-                        prob = (phi1 * phi2 * phi12)**2
-!                        print *, "phi1", phi1
-!                        print *, "phi2", phi2
-!                        print *, "phi12", phi12
-!                        print *, "prob", prob
-                end function
-
-                subroutine metrosinglestep(r1, r2, w, S, a, beta, alpha, accept, stepsize)
-                        implicit none
-                        real, intent(in) :: S, a, beta, alpha, stepsize
-                        real, dimension(:), intent(inout) :: r1, r2
-                        real, intent(inout) :: w
-                        integer, intent(inout) :: accept
-
-                        real, dimension(ncoord) :: r1old, r2old
-                        real :: wold
-                        real, dimension(ncoord) :: ran_no
-                        real :: ranno
-
-                        r1old = r1
-                        r2old = r2
-                        wold = w
-
-                        call random_number(ran_no)
-                        r1 = r1old + stepsize * (ran_no - 0.5)
-                        call random_number(ran_no)
-                        r2 = r2old + stepsize * (ran_no - 0.5)
-
-                        call random_number(ranno)
-                        w = prob(r1, r2, S, a, beta, alpha)
-                        if (w / wold .gt. ranno) then
-                                accept = accept + 1
-                        else
-                                r1 = r1old
-                                r2 = r2old
-                                w = wold
-                        endif
-                end subroutine metrosinglestep
-
-                subroutine metropolis(r1, r2, S, a, beta, alpha &
-                                , accept, stepsize, Nthermal, Ntotal    &
-                                , Energy, delb, dele)
-                        implicit none
-                        integer, intent(in) :: Nthermal, Ntotal
-                        real, intent(in) :: S, a, beta, alpha, stepsize
-                        real, dimension(:), intent(inout) :: r1, r2
-                        integer, intent(out) :: accept
-                        real, dimension(:), intent(out) :: Energy, delb, dele
-
-                        real :: w
-                        integer :: i
-
-                        accept = 0
-                        w = prob(r1, r2, S, a, beta, alpha)
-                        print *, "prob", w
-                        do i = 1, Nthermal
-                                call metrosinglestep(r1, r2, w, S, a, beta, alpha, accept, stepsize)
-                        enddo
-
-                        accept = 0
-                        call energyloc(r1, r2, S, a, beta, alpha, Energy(1), delb(1), dele(1))
-                        do i = 2, Ntotal
-                                call metrosinglestep(r1, r2, w, S, a, beta, alpha, accept, stepsize)
-                                call energyloc(r1, r2, S, a, beta, alpha, Energy(i), delb(i), dele(i))
-                        enddo
-                end subroutine metropolis
 
                 real function min_beta(beta, Energy, delb, delE)
                         implicit none
-                        real, dimension(:), intent(in) :: Energy, delb, delE
-                        real, intent(inout) :: beta
+                        real, intent(in) :: beta, Energy
+                        real, dimension(:), intent(in) :: delb, delE
 
-                        min_beta = beta - 2 * (avg(delE) - avg(Energy) * avg(delb))
+                        min_beta = beta - gamm * 2 *  ( avg(delE(Nthermal: Ntotal)) &
+                                - Energy * avg(delb(Nthermal: Ntotal)) )
                 end function
 
-                real function avg(x)
+                subroutine calpara(config, r1, r2, S, a, beta  &
+                                , r1l, r1r, r2l, r2r, r12 &
+                                , r1lnorm, r1rnorm, r2lnorm, r2rnorm, r12norm &
+                                , phi1L, phi1R, phi1, phi2L, phi2R, phi2, phi12)
                         implicit none
-                        real, dimension(:), intent(in) :: x
+                        real, dimension(:, :), intent(in) :: config
+                        real, intent(in) :: S, a, beta
+                        real, dimension(:, :), intent(out) :: r1, r2, r1l, r1r, r2l, r2r, r12
+                        real, dimension(:), intent(out) &
+                                :: r1lnorm, r1rnorm, r2lnorm, r2rnorm, r12norm &
+                                , phi1L, phi1R, phi2L, phi2R, phi1, phi2, phi12
 
-                        avg = sum(x) / size(x)
-                end function
+                        real, dimension(ncoord, TotalWalkers) :: proton, xunit
 
-                real function sd(x)
+                        xunit = 0.
+                        xunit(1, :) = 1.
+                        proton = 0.5 * S * xunit
+
+                        r1 = config(1:3, :)
+                        r2 = config(4:6, :)
+                        r1l = r1 + proton
+                        r1r = r1 - proton
+                        r2l = r2 + proton
+                        r2r = r2 - proton
+                        r12 = r1 - r2
+
+                        r1lnorm = norm2(r1l, dim=1)
+                        r1rnorm = norm2(r1r, dim=1)
+                        r2lnorm = norm2(r2l, dim=1)
+                        r2rnorm = norm2(r2r, dim=1)
+                        r12norm = norm2(r12, dim=1)
+
+                        phi1L = exp(-r1lnorm / a)
+                        phi1R = exp(-r1rnorm / a)
+                        phi2L = exp(-r2lnorm / a)
+                        phi2R = exp(-r2rnorm / a)
+
+                        phi1 = phi1L + phi1R
+                        phi2 = phi2L + phi2R
+                        phi12 = exp( r12norm / (alpha * (1. + beta * r12norm)))
+                end subroutine
+
+                subroutine energyloc(config, S, a, beta, Elocal, delphi, Edelphi)
                         implicit none
-                        real, dimension(:), intent(in) :: x
+                        real, dimension(:, :), intent(in) :: config
+                        real, intent(in) :: S, a, beta
+                        real, intent(out) :: Elocal, delphi, Edelphi
 
-                        sd = sqrt(avg(x * x) - avg(x)**2)
+                        real, dimension(ncoord, TotalWalkers) &
+                                :: r1, r1L, r1R, r2, r2L, r2R, r12 &
+                                , r1Lunit, r1Runit, r2Lunit, r2Runit, r12unit
+                        real, dimension(TotalWalkers) &
+                                :: phi1, phi1L, phi1R, phi2, phi2L, phi2R, phi12 &
+                                , r1Lnorm, r1Rnorm, r2Lnorm, r2Rnorm, r12norm
+                        real, dimension(TotalWalkers) :: kinetic, potential &
+                                , e1, e2, cor, cross, cross1, cross2, cross3 &
+                                , Etot, delphiarray
+
+                        call calpara(config, r1, r2, s, a, beta &
+                                , r1L, r1R, r2L, r2R, r12 &
+                                , r1Lnorm, r1Rnorm, r2Lnorm, r2Rnorm, r12norm &
+                                , phi1L, phi1R, phi1, phi2L, phi2R, phi2, phi12)
+
+                        r1Lunit = r1L / spread(r1Lnorm, 1, ncoord)
+                        r1Runit = r1R / spread(r1Rnorm, 1, ncoord)
+                        r2Lunit = r2L / spread(r2Lnorm, 1, ncoord)
+                        r2Runit = r2R / spread(r2Rnorm, 1, ncoord)
+                        r12unit = r12 / spread(r12norm, 1, ncoord)
+
+                        e1 = (phi1L / r1Lnorm + phi1R / r1Rnorm) / (a * phi1)
+                        e2 = (phi2L / r2Lnorm + phi2R / r2Rnorm) / (a * phi2)
+
+                        cross1 = (phi1L * sum(r1Lunit * r12unit, dim=1) &
+                                + phi1R * sum(r1Runit * r12unit , dim=1)) / phi1
+                        cross2 = (phi2L * sum(r2Lunit * r12unit, dim=1) &
+                                + phi2R * sum(r2Runit * r12unit , dim=1)) / phi2
+                        cross3 = 1. / (2. * a * (1.+ beta * r12norm)**2)
+
+                        cross = (cross1 - cross2) * cross3
+                        cor = - ((1. + 4. * beta) * r12norm + 4.) / (4. * r12norm * (1 + beta * r12norm)**4.)
+
+                        potential = 1. / r12norm - 1. / r1Lnorm - 1. / r1Rnorm - 1. / r2Lnorm - 1. / r2Rnorm
+                        kinetic = e1 + e2 + cross + cor
+                        Etot = kinetic + potential + 1. / s - 1. / a**2
+
+                        delphiarray = -r12norm**2 / (alpha *(1 + beta * r12norm)**2)
+
+                        Elocal = avg(Etot)
+                        delphi = avg(delphiarray)
+                        Edelphi = avg(Etot * delphiarray)
+                end subroutine
+
+                function prob(config, S, a, beta)
+                        implicit none
+                        real, dimension(:, :), intent(in) :: config
+                        real, intent(in) :: S, a, beta
+
+                        real, dimension(size(config,1) / 2, TotalWalkers) &
+                                :: r1, r2, r1l, r1r, r2l, r2r, r12
+                        real, dimension(TotalWalkers) :: r1lnorm, r1rnorm, r2lnorm, r2rnorm, r12norm &
+                                , phi1L, phi1R, phi2L, phi2R, phi1, phi2, phi12
+                        real, dimension(TotalWalkers) :: prob
+
+                        call calpara(config, r1, r2, S, a, beta &
+                                , r1l, r1r, r2l, r2r, r12 &
+                                , r1lnorm, r1rnorm, r2lnorm, r2rnorm, r12norm &
+                                , phi1L, phi1R, phi1, phi2L, phi2R, phi2, phi12)
+
+                        prob = phi1 * phi2 * phi12
                 end function
 
+                subroutine metropolis(config, S, a, beta, Energy, delphi, Edelphi)
+                        implicit none
+                        real, intent(in) :: S, a, beta
+                        real, dimension(:, :), intent(inout) :: config
+                        real, dimension(:), intent(out) :: Energy, delphi, Edelphi
+
+                        real, dimension(ncoord * 2, TotalWalkers) :: confignew, ranno
+                        real, dimension(TotalWalkers) :: ratio, accept
+                        real :: ran, stepsize
+                        integer :: step, i
+
+                        stepsize = 1.
+                        accept = 0
+                        do step = 1, Ntotal
+                                call random_number(ranno)
+                                confignew = config + stepsize * (ranno - 0.5)
+                                ratio = (prob(confignew, S, a, beta) / prob(config, S, a, beta))**2
+                                do i = 1, TotalWalkers
+                                        call random_number(ran)
+                                        if ( ratio(i) .gt. ran) then
+                                                accept(i) = accept(i) + 1
+                                                config(:, i) = confignew(:, i)
+                                        end if
+                                end do
+                                if (step .ge. Nthermal) then
+                                        call energyloc(config, S, a, beta &
+                                                , Energy(step), delphi(step), Edelphi(step))
+                                end if
+
+                                if (mod(step, 100) .eq. 0) then
+                                        stepsize = stepsize * (sum(accept) / (50.0 * TotalWalkers))
+                                        accept = 0
+                                end if
+                        end do
+                end subroutine metropolis
 end module
