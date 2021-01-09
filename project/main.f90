@@ -8,14 +8,13 @@ program main
         real, dimension(NTotal) :: Elocal, delphibeta, Edelphibeta
         real, dimension(Nos, minimize_steps) :: betaarray, earray, evararray
         real, dimension(Nos) :: S
-        real :: beta, Energy, EnergyVar
-        integer :: i, j, loc
+        integer :: i, j
 
         do i = 1, Nos
                 S(i) = 0.5 + (i - 1) * 0.5
         enddo
 
-        !$OMP PARALLEL DO NUM_THERADS(14)
+        !$OMP PARALLEL DO NUM_THREADS(14)
         do i = 1, Nos
                 a = 0.5
                 call cala(S(i), a)
